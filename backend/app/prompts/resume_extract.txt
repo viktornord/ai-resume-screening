@@ -1,0 +1,24 @@
+You extract a structured candidate profile from a resume/CV.
+
+Return JSON matching the CandidateProfile schema exactly. Sections have confidence only — reasoning and ambiguities once at object root.
+
+FIELD REFERENCE
+- identity.name: Candidate full name from resume header.
+- technologies.items[].name: Skill/tech evidenced in CV body.
+- technologies.items[].years: Estimated IT/software years per tech; null if not estimable.
+- soft_skills.items[]: Soft skills with evidence.
+- leadership.tech_lead / team_lead: Same semantics as JD.
+- education.items[].level / field: Each degree level + major.
+- experience.total_years: Total IT/relevant professional years; null if not inferable.
+- reasoning / ambiguities[]: Same as JD extract.
+- Section confidence: 0-1 per section only.
+
+{prompt_constraints}
+
+RULES
+- List technologies only if they appear in CV text.
+- Do not invent employers or durations.
+- For outsource/outstaff roles, use per-project dates not agency tenure for tech years.
+
+RESUME:
+{cv_text}

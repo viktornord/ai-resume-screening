@@ -1,0 +1,5 @@
+Anu Kumar
+Senior Backend Engineer
+
+Python (6 years), FastAPI (3 years) in current role at TechCorp (2020-present).
+BSc Computer Science. Tech Lead for backend team. Mentoring junior developers.

@@ -1,0 +1,29 @@
+[project]
+name = "resume-screening-backend"
+version = "1.0.0"
+description = "AI Resume Screening API"
+readme = "README.md"
+requires-python = ">=3.11"
+dependencies = [
+    "fastapi>=0.115.6",
+    "uvicorn[standard]>=0.34.0",
+    "pydantic>=2.10.4",
+    "pydantic-settings>=2.7.0",
+    "httpx>=0.28.1",
+    "python-multipart>=0.0.20",
+    "pypdf>=5.1.0",
+    "python-docx>=1.1.2",
+]
+
+[dependency-groups]
+dev = [
+    "pytest>=8.3.4",
+    "pytest-asyncio>=0.25.0",
+]
+
+[tool.uv]
+package = false
+
+[tool.pytest.ini_options]
+asyncio_mode = "auto"
+pythonpath = ["."]

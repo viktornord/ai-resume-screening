@@ -1,0 +1,5 @@
+Senior Python Engineer
+
+We are looking for a Senior Python Engineer with 5+ years of Python and 2+ years of FastAPI.
+Docker is a nice-to-have. Bachelor's in Computer Science or Engineering required.
+5+ years in software development. Technical leadership expected; no people management.
