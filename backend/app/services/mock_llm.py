@@ -1,6 +1,5 @@
 """Deterministic mock LLM responses for tests and offline dev."""
 
-import re
 from typing import TypeVar
 
 from pydantic import BaseModel
@@ -71,19 +70,12 @@ MOCK_MATCH = {
     "not_mentioned_skills": [
         {
             "name": "Docker",
-            "description": "JD nice-to-have; not on CV — may be a gap or omitted",
+            "description": "JD nice-to-have; not on CV",
         }
     ],
     "reasoning": "Strong must-have tech match; Docker only a nice-to-have gap.",
     "ambiguities": ["JD leadership scope unclear vs candidate tech-lead title only"],
 }
-
-
-def _apply_name_hints(profile: dict, match: dict, prompt: str) -> None:
-    name_match = re.search(r"CANDIDATE NAME HINT:\s*(\S+)", prompt, re.I)
-    if name_match:
-        profile["identity"] = {**profile["identity"], "name": name_match.group(1)}
-        match["candidate_name"] = name_match.group(1)
 
 
 def mock_response(prompt: str, model_class: type[T]) -> T:
@@ -92,7 +84,6 @@ def mock_response(prompt: str, model_class: type[T]) -> T:
     if model_class is ResumeScreeningResult:
         profile = dict(MOCK_PROFILE)
         match = dict(MOCK_MATCH)
-        _apply_name_hints(profile, match, prompt)
         if "alice" in prompt.lower():
             profile["identity"] = {**profile["identity"], "name": "Alice Smith"}
             match["candidate_name"] = "Alice Smith"

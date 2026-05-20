@@ -18,8 +18,10 @@ TECH_CV_YEARS = (
     "Follow Prompt constraints: Technology years."
 )
 CV_TECH_ITEMS = (
-    "Distinct technologies from SKILLS, PROFILE, and EMPLOYMENT HISTORY (max 30 entries); "
-    "one per name; never leave empty when the resume lists tools — leave room to complete match."
+    "Technologies explicitly named on the resume only (max 30). "
+    "Include a name only if that exact tool/language/framework appears in the CV text — "
+    "not inferred from job titles, not copied from the job description, not guessed from "
+    "'similar' work. Empty list is OK if the CV has no explicit skills section."
 )
 MATCH_SCORE_DESC = (
     "0-100 overall fit vs JD must/nice tech and experience; do not use 0 when there is clear overlap."
@@ -58,8 +60,9 @@ NOT_MENTIONED_DESC = "Why it matters; suggest clarification if critical."
 PROMPT_CONSTRAINTS = """
 ### Evidence and hallucination
 
-- List a technology only if it appears in the resume or JD text.
-- Do not invent employers, projects, or durations not supported by text.
+- **Profile `technologies`**: resume/CV text only. Never copy technologies from the job description.
+- **Match lists**: compare JD requirements to what is on the CV/profile; JD tech absent from CV → `not_mentioned_skills`.
+- Do not invent employers, projects, tools, or durations not supported by text.
 - If evidence is weak, lower section `confidence` and add object-level `ambiguities[]`.
 
 ### Technology years (CV extract + match)
@@ -81,9 +84,11 @@ PROMPT_CONSTRAINTS = """
 
 ### Candidate profile (CV extract)
 
-- Populate `technologies.items` from SKILLS + PROFILE + every EMPLOYMENT HISTORY bullet.
-- Estimate per-tech `years` from dated role windows where that tech is used; undated SKILLS alone → `years: null`.
-- `experience.total_years` = sum of dated IT/software employment intervals.
+- `technologies.items`: only **literal** names from the resume — SKILLS / TECHNOLOGIES section, skills bullets, or employment bullets that **name** the tool (e.g. "Python", "FastAPI"). Do **not** add a stack because a role sounds like backend/AI work.
+- Do **not** add JD must-haves (e.g. LangGraph, CrewAI, Kubernetes) unless that exact name appears on the CV.
+- Prefer fewer, accurate items over a long inferred list.
+- Per-tech `years`: only from dated roles where that name appears; undated SKILLS list → `years: null`.
+- `experience.total_years` = sum of dated IT/software employment intervals (not from JD).
 
 ### Technology priority (JD extract)
 

@@ -48,7 +48,7 @@ def test_normalize_jd_tech_priority_aliases():
     }
     req = Requirements.model_validate(normalize_requirements(raw))
     assert req.technologies.items[0].priority == "must"
-    assert req.technologies.items[1].priority == "nice"
+    assert req.technologies.items[1].priority == "nice"  # "plus" -> nice
 
 
 def test_normalize_requirements_confidence_only_no_validation_error():
@@ -114,6 +114,35 @@ def test_normalize_resume_screening_hoists_root_match_fields():
     result = ResumeScreeningResult.model_validate(normalize_resume_screening(raw))
     assert result.match.match_score == 72
     assert result.match.matching_skills[0].name == "Python"
+
+
+def test_normalize_resume_screening_drops_profile_tech_from_not_mentioned():
+    from app.models.resume_screening import ResumeScreeningResult
+
+    raw = {
+        "profile": {
+            "reasoning": "x",
+            "ambiguities": [],
+            "identity": {"name": "Viktor", "confidence": 0.9},
+            "technologies": {"items": [{"name": "LangGraph", "years": 2}], "confidence": 0.8},
+            "soft_skills": {"items": [], "confidence": 0.5},
+            "leadership": {"tech_lead": False, "team_lead": False, "confidence": 0.7},
+            "education": {"items": [], "confidence": 0.7},
+            "experience": {"total_years": 10, "confidence": 0.7},
+        },
+        "match": {
+            "candidate_name": "Viktor",
+            "match_score": 85,
+            "matching_skills": [],
+            "not_mentioned_skills": ["LangGraph", "CrewAI"],
+            "reasoning": "x",
+            "ambiguities": [],
+        },
+    }
+    result = ResumeScreeningResult.model_validate(normalize_resume_screening(raw))
+    not_names = [s.name for s in result.match.not_mentioned_skills]
+    assert "LangGraph" not in not_names
+    assert "CrewAI" in not_names
 
 
 def test_normalize_candidate_profile_soft_skill_objects():

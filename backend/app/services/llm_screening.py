@@ -1,10 +1,10 @@
 import json
 import logging
+import re
 
 from app.config import settings
 from app.models.requirements import Requirements
 from app.models.resume_screening import ResumeScreeningResult
-from app.services.cv_text import clean_cv_text
 from app.services.llm_client import generate_json
 from app.services.prompt_loader import load_prompt
 from app.structured_logging import log_event, log_timing, resume_screening_summary
@@ -12,10 +12,10 @@ from app.structured_logging import log_event, log_timing, resume_screening_summa
 logger = logging.getLogger(__name__)
 
 SCREEN_SYSTEM = (
-    "You extract a candidate profile from the resume, then produce a complete match vs job "
-    "requirements. The match object must include match_score (1-100 when there is overlap), "
-    "matching_skills, not_mentioned_skills, and non-empty reasoning. "
-    "Respond with JSON only: profile and match, matching the schema exactly."
+    "Extract profile from the resume only; then match vs the job description. "
+    "profile.technologies must list only tool/language names that literally appear on the CV — "
+    "never copy JD requirements into profile, never infer stacks from job titles. "
+    "Respond with JSON only: top-level keys profile and match (both required)."
 )
 
 
@@ -23,6 +23,13 @@ def _truncate(text: str, max_chars: int) -> str:
     if len(text) <= max_chars:
         return text
     return text[: max_chars - 50] + "\n\n[... truncated ...]"
+
+
+def _clean_cv_text(cv_text: str) -> str:
+    text = cv_text.replace("\xa0", " ")
+    text = re.sub(r"[·•]\s*", "\n- ", text)
+    text = re.sub(r"\n{3,}", "\n\n", text)
+    return text.strip()
 
 
 def _low_confidence_requirement_sections(requirements: Requirements) -> list[str]:
@@ -70,14 +77,14 @@ async def screen_resume(
 ) -> ResumeScreeningResult:
     """One LLM call: CV → CandidateProfile + match vs Requirements."""
     resume_name = filename or "resume"
-    cleaned_cv = clean_cv_text(raw_cv)
+    cv_text = _clean_cv_text(raw_cv)
     low = _low_confidence_requirement_sections(requirements)
 
     with log_timing(
         logger,
         "screen_resume",
         resume=resume_name,
-        cv_chars=len(cleaned_cv),
+        cv_chars=len(cv_text),
         low_confidence_sections=low,
     ):
         prompt = load_prompt(
@@ -87,15 +94,8 @@ async def screen_resume(
             low_confidence_sections=", ".join(low) if low else "none",
             jd_ambiguities=json.dumps(requirements.ambiguities),
             raw_jd=_truncate(raw_jd, settings.max_jd_chars),
-            raw_cv=_truncate(cleaned_cv, settings.max_resume_chars),
+            raw_cv=_truncate(cv_text, settings.max_resume_chars),
         )
-        if filename:
-            prompt = (
-                f"## Candidate name hint\n\n"
-                f"Check filename for name if missing from resume: `{filename}`\n\n"
-                f"{prompt}"
-            )
-
         result = await generate_json(
             prompt,
             ResumeScreeningResult,

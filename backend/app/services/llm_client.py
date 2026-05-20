@@ -106,10 +106,10 @@ def _sanitize_json_text(text: str) -> str:
     text = _strip_json_fences(text)
 
     def _cap_decimal(match: re.Match[str]) -> str:
-        num = match.group(0)
-        whole, _, frac = num.partition(".")
-        frac_digits = "".join(c for c in frac if c.isdigit())[:4]
-        return f"{whole}.{frac_digits}" if frac_digits else whole
+        try:
+            return str(round(float(match.group(0)), 2))
+        except ValueError:
+            return match.group(0)
 
     text = re.sub(r"\d+\.\d+", _cap_decimal, text)
     # Collapse absurd integer runs (e.g. 555555…)
@@ -144,15 +144,25 @@ def _loads_json_object(raw: str | dict[str, Any]) -> dict[str, Any]:
     raise LLMError(f"Invalid JSON from model near: …{snippet}…") from last_error
 
 
-def _parse_model_output(
-    raw: str | dict[str, Any],
-    model_class: type[T],
-    *,
-    source_text: str | None = None,
-) -> T:
+def _sanitize_parsed_dict(node: Any) -> Any:
+    if isinstance(node, dict):
+        out: dict[str, Any] = {}
+        for k, v in node.items():
+            if k == "confidence" and isinstance(v, (int, float)):
+                out[k] = round(max(0.0, min(1.0, float(v))), 2)
+            else:
+                out[k] = _sanitize_parsed_dict(v)
+        return out
+    if isinstance(node, list):
+        return [_sanitize_parsed_dict(item) for item in node]
+    return node
+
+
+def _parse_model_output(raw: str | dict[str, Any], model_class: type[T]) -> T:
     data = _loads_json_object(raw) if isinstance(raw, str) else raw
     if isinstance(data, dict):
-        data = normalize_llm_payload(data, model_class, jd_text=source_text)
+        data = _sanitize_parsed_dict(data)
+        data = normalize_llm_payload(data, model_class)
     return model_class.model_validate(data)
 
 
@@ -173,6 +183,18 @@ def _extract_message_content(body: dict[str, Any]) -> str | dict[str, Any]:
     raise LLMError("Mistral API returned empty message content")
 
 
+def _schema_strict(model_class: type[BaseModel]) -> bool:
+    """Strict json_schema enforces shape (e.g. profile + match). Numbers fixed post-parse."""
+    return model_class.__name__ == "ResumeScreeningResult"
+
+
+def _response_modes(model_class: type[BaseModel]) -> list[ResponseMode]:
+    # Unstructured json_object retry drops profile; keep schema-only for screening.
+    if model_class.__name__ == "ResumeScreeningResult":
+        return ["json_schema"]
+    return ["json_schema", "json_object"]
+
+
 def _response_format_payload(
     model_class: type[BaseModel],
     mode: ResponseMode,
@@ -183,7 +205,7 @@ def _response_format_payload(
         "type": "json_schema",
         "json_schema": {
             "name": model_class.__name__,
-            "strict": False,
+            "strict": _schema_strict(model_class),
             "schema": model_json_schema(model_class),
         },
     }
@@ -205,7 +227,6 @@ async def _generate_with_mode(
     model_class: type[T],
     *,
     system: str | None,
-    source_text: str | None,
     mode: ResponseMode,
 ) -> T:
     payload = {
@@ -220,7 +241,7 @@ async def _generate_with_mode(
     }
     body = await _post_chat(client, payload)
     content = _extract_message_content(body)
-    return _parse_model_output(content, model_class, source_text=source_text)
+    return _parse_model_output(content, model_class)
 
 
 def _is_json_parse_error(exc: BaseException) -> bool:
@@ -234,7 +255,6 @@ async def generate_json(
     model_class: type[T],
     system: str | None = None,
     *,
-    source_text: str | None = None,
     step: str | None = None,
 ) -> T:
     """Run an LLM step via Mistral; retry with json_object if schema output is invalid."""
@@ -254,7 +274,7 @@ async def generate_json(
 
     await ensure_model_ready()
 
-    modes: list[ResponseMode] = ["json_schema", "json_object"]
+    modes = _response_modes(model_class)
     last_error: Exception | None = None
 
     async with httpx.AsyncClient(timeout=_httpx_timeout()) as client:
@@ -266,7 +286,6 @@ async def generate_json(
                         prompt,
                         model_class,
                         system=system,
-                        source_text=source_text,
                         mode=mode,
                     )
             except httpx.TimeoutException as e:
