@@ -33,6 +33,6 @@ export interface ScreenResponse {
 
 export interface HealthResponse {
   status: string;
-  ollama_reachable: boolean;
+  llm_reachable: boolean;
   model_ready: boolean;
 }

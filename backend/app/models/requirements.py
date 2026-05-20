@@ -9,9 +9,9 @@ TechPriority = Literal["must", "nice"]
 
 
 class RoleSection(BaseModel):
-    title: str = Field(description=fd.ROLE_TITLE)
-    seniority: Seniority = Field(description=fd.ROLE_SENIORITY)
-    confidence: float = Field(ge=0, le=1, description=fd.SECTION_CONFIDENCE)
+    title: str = Field(default="", description=fd.ROLE_TITLE)
+    seniority: Seniority = Field(default="unknown", description=fd.ROLE_SENIORITY)
+    confidence: float = Field(default=0.5, ge=0, le=1, description=fd.SECTION_CONFIDENCE)
 
 
 class TechItem(BaseModel):
@@ -22,34 +22,34 @@ class TechItem(BaseModel):
 
 class TechnologiesSection(BaseModel):
     items: list[TechItem] = Field(default_factory=list)
-    confidence: float = Field(ge=0, le=1, description=fd.SECTION_CONFIDENCE)
+    confidence: float = Field(default=0.5, ge=0, le=1, description=fd.SECTION_CONFIDENCE)
 
 
 class SoftSkillsSection(BaseModel):
     items: list[str] = Field(default_factory=list, description=fd.SOFT_SKILL)
-    confidence: float = Field(ge=0, le=1, description=fd.SECTION_CONFIDENCE)
+    confidence: float = Field(default=0.5, ge=0, le=1, description=fd.SECTION_CONFIDENCE)
 
 
 class LeadershipSection(BaseModel):
-    tech_lead: bool = Field(description=fd.TECH_LEAD)
-    team_lead: bool = Field(description=fd.TEAM_LEAD)
-    confidence: float = Field(ge=0, le=1, description=fd.SECTION_CONFIDENCE)
+    tech_lead: bool = Field(default=False, description=fd.TECH_LEAD)
+    team_lead: bool = Field(default=False, description=fd.TEAM_LEAD)
+    confidence: float = Field(default=0.5, ge=0, le=1, description=fd.SECTION_CONFIDENCE)
 
 
 class EducationSection(BaseModel):
     min_level: str | None = Field(default=None, description=fd.EDU_MIN_LEVEL)
     fields: list[str] = Field(default_factory=list, description=fd.EDU_FIELDS)
     required: bool = Field(default=False, description=fd.EDU_REQUIRED)
-    confidence: float = Field(ge=0, le=1, description=fd.SECTION_CONFIDENCE)
+    confidence: float = Field(default=0.5, ge=0, le=1, description=fd.SECTION_CONFIDENCE)
 
 
 class ExperienceSection(BaseModel):
     min_total_years: float | None = Field(default=None, description=fd.EXP_MIN_TOTAL)
-    confidence: float = Field(ge=0, le=1, description=fd.SECTION_CONFIDENCE)
+    confidence: float = Field(default=0.5, ge=0, le=1, description=fd.SECTION_CONFIDENCE)
 
 
 class Requirements(BaseModel):
-    reasoning: str = Field(description=fd.REASONING)
+    reasoning: str = Field(default="", description=fd.REASONING)
     ambiguities: list[str] = Field(default_factory=list, description=fd.AMBIGUITIES)
     role: RoleSection
     technologies: TechnologiesSection

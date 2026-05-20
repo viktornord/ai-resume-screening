@@ -16,7 +16,7 @@ export default function App() {
       .catch(() =>
         setHealth({
           status: "unreachable",
-          ollama_reachable: false,
+          llm_reachable: false,
           model_ready: false,
         }),
       );
@@ -45,12 +45,12 @@ export default function App() {
               >
                 {health.status === "ok" && health.model_ready
                   ? "LLM ready"
-                  : health.ollama_reachable
-                    ? "Model loading"
+                  : health.llm_reachable
+                    ? "Mistral reachable"
                     : "LLM offline"}
               </Badge>
               <span className="text-xs text-muted-foreground">
-                Ollama {health.ollama_reachable ? "reachable" : "unreachable"}
+                Mistral {health.llm_reachable ? "reachable" : "unreachable"}
               </span>
             </div>
           )}

@@ -27,5 +27,5 @@ class ScreenResponse(BaseModel):
 
 class HealthResponse(BaseModel):
     status: str
-    ollama_reachable: bool
+    llm_reachable: bool
     model_ready: bool

@@ -10,16 +10,13 @@ Recruiters upload a job description and resumes; the backend extracts requiremen
 |-------|------|
 | Backend | Python 3.11+, FastAPI, [uv](https://docs.astral.sh/uv/) |
 | Frontend | React 18, TypeScript, Vite, Tailwind, shadcn-style UI |
-| LLM | Ollama + `mistral` |
+| LLM | [Mistral API](https://docs.mistral.ai/) (`mistral-small-latest` by default) |
 
 ## Quick start (Docker)
 
 ```bash
-# Pull the model (first time only)
-docker compose up -d ollama
-docker compose exec ollama ollama pull mistral
-
-# Run everything (use MOCK_LLM=true to skip Ollama)
+cp .env.example .env
+# Set MISTRAL_API_KEY in .env (https://console.mistral.ai/)
 docker compose up --build
 ```
 
@@ -27,7 +24,7 @@ docker compose up --build
 - **API:** http://localhost:8000  
 - **Health:** http://localhost:8000/health  
 
-Mock mode (no GPU / no model):
+Mock mode (no API key, instant):
 
 ```bash
 MOCK_LLM=true docker compose up --build
@@ -40,8 +37,15 @@ MOCK_LLM=true docker compose up --build
 ```bash
 cd backend
 uv sync --all-groups
+
+# Offline
 MOCK_LLM=true uv run uvicorn app.main:app --reload --port 8000
+
+# Mistral (from repo root .env)
+cd backend && uv run uvicorn app.main:app --reload --port 8000
 ```
+
+Set `MISTRAL_API_KEY` in `.env` at the repo root (see `.env.example`).
 
 ### Frontend
 
@@ -53,11 +57,22 @@ npm run dev
 
 Vite proxies `/api` and `/health` to `http://localhost:8000`.
 
+### Debugger (Cursor / VS Code)
+
+1. `cd backend && uv sync --all-groups`
+2. **Run and Debug** → **Backend: FastAPI (mock LLM)** or **Backend: FastAPI (Mistral)** (uses `MISTRAL_API_KEY` from your environment)
+
+Configs: [`.vscode/launch.json`](.vscode/launch.json).
+
+## Environment
+
+| Variable | Description |
+|----------|-------------|
+| `MISTRAL_API_KEY` | Required for real screening ([Mistral console](https://console.mistral.ai/)) |
+| `MISTRAL_MODEL` | Default `mistral-small-latest` |
+| `MOCK_LLM` | `true` = deterministic mock responses (tests/CI) |
+| `MAX_CONCURRENT_LLM` | Parallel resume LLM calls (default `4`) |
+
 ## Project layout
 
-```
-backend/app/     # FastAPI, models, prompts, pipeline
-frontend/src/    # React UI (upload, ranked table, reasoning)
-```
-
-See [AGENTS.md](AGENTS.md) and [project_plan.md](project_plan.md) for API and pipeline details.
+See [AGENTS.md](AGENTS.md) and [project_plan.md](project_plan.md).

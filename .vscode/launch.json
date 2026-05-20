@@ -1,0 +1,68 @@
+{
+  "version": "0.2.0",
+  "configurations": [
+    {
+      "name": "Backend: FastAPI (mock LLM)",
+      "type": "debugpy",
+      "request": "launch",
+      "module": "uvicorn",
+      "args": ["app.main:app", "--host", "127.0.0.1", "--port", "8000"],
+      "cwd": "${workspaceFolder}/backend",
+      "envFile": "${workspaceFolder}/.env",
+      "env": {
+        "MOCK_LLM": "true",
+        "LOG_LEVEL": "DEBUG",
+        "LOG_FORMAT": "pretty",
+        "PYTHONPATH": "${workspaceFolder}/backend"
+      },
+      "justMyCode": true
+    },
+    {
+      "name": "Backend: FastAPI (Mistral)",
+      "type": "debugpy",
+      "request": "launch",
+      "module": "uvicorn",
+      "args": ["app.main:app", "--host", "127.0.0.1", "--port", "8000"],
+      "cwd": "${workspaceFolder}/backend",
+      "envFile": "${workspaceFolder}/.env",
+      "env": {
+        "MOCK_LLM": "false",
+        "LOG_LEVEL": "DEBUG",
+        "LOG_FORMAT": "pretty",
+        "PYTHONPATH": "${workspaceFolder}/backend"
+      },
+      "justMyCode": true
+    },
+    {
+      "name": "Backend: pytest (mock)",
+      "type": "debugpy",
+      "request": "launch",
+      "module": "pytest",
+      "args": ["-v", "${file}"],
+      "cwd": "${workspaceFolder}/backend",
+      "env": {
+        "MOCK_LLM": "true",
+        "PYTHONPATH": "${workspaceFolder}/backend"
+      },
+      "justMyCode": true
+    },
+    {
+      "name": "Frontend: Chrome",
+      "type": "chrome",
+      "request": "launch",
+      "url": "http://localhost:5173",
+      "webRoot": "${workspaceFolder}/frontend/src",
+      "sourceMapPathOverrides": {
+        "webpack:///src/*": "${webRoot}/*"
+      }
+    }
+  ],
+  "compounds": [
+    {
+      "name": "Full stack (mock LLM)",
+      "configurations": ["Backend: FastAPI (mock LLM)", "Frontend: Chrome"],
+      "preLaunchTask": "frontend: dev server",
+      "stopAll": true
+    }
+  ]
+}

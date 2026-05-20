@@ -7,7 +7,7 @@ Implementation plan: [project_plan.md](project_plan.md).
 Recruiters upload a JD and multiple resumes. Backend:
 
 1. **LLM once:** JD → `Requirements` (sections + `confidence`; **`reasoning` / `ambiguities` once on the object**).
-2. **Per resume:** CV → `CandidateProfile` (same); **match** → score + skills + object-level **`reasoning` / `ambiguities`**.
+2. **Per resume:** one LLM call → `CandidateProfile` + **match** (`ResumeScreeningResult`; profile used internally, match fields on API).
 3. Match uses structured data + raw JD/CV; low section `confidence` → prefer raw text for that section.
 
 | Decision | Choice |
@@ -15,7 +15,7 @@ Recruiters upload a JD and multiple resumes. Backend:
 | Backend | Python 3.11+, FastAPI |
 | Python tooling | **[uv](https://docs.astral.sh/uv/) only** — `pyproject.toml` + `uv.lock`; no `pip install`, `poetry`, or `requirements.txt` |
 | Frontend | React 18, TypeScript, Vite, Tailwind + shadcn/ui |
-| LLM | Ollama + `mistral` |
+| LLM | Mistral API (`mistral-small-latest` default; `MISTRAL_API_KEY`) |
 | Pipeline | F-first: 1× JD extract + per CV (profile + match) |
 | Education match | **OR only** — any one `fields[]` entry; no AND in v1 |
 | Explainability | One `reasoning` + one `ambiguities[]` **per LLM object** (not per section) |
@@ -26,7 +26,7 @@ Recruiters upload a JD and multiple resumes. Backend:
 1. Upload JD + resumes  
 2. Extract text (PDF/DOCX)  
 3. JD → `Requirements`  
-4. Per resume: CV → `CandidateProfile` → match → candidate row  
+4. Per resume: screen (profile + match) → candidate row  
 5. Rank, Good/Bad threshold  
 
 ## LLM outputs (three objects)
@@ -93,7 +93,7 @@ Section `confidence < 0.6` → match prompt prefers raw JD/CV for that section. 
 
 ### `GET /health`
 
-`status`, `ollama_reachable`, `model_ready`.
+`status`, `llm_reachable`, `model_ready`.
 
 ## Repository layout
 
@@ -105,8 +105,8 @@ backend/
   app/
     models/requirements.py    # Field(description=...) per field-descriptions table
     schemas/field_descriptions.py
-    services/jd_extract.py, resume_extract.py, llm_screening.py, ranking.py
-    prompts/jd_extract.txt, resume_extract.txt, screening.txt  # FIELD REFERENCE
+    services/jd_extract.py, llm_client.py, llm_screening.py, ranking.py
+    prompts/jd_extract.md, screen_resume.md  # role + task + prompt_constraints
 ```
 
 ## Python toolchain (uv — required)
@@ -117,7 +117,7 @@ All backend work uses **uv** from `backend/`. Do not use bare `python`/`pip` for
 |------|---------|
 | Install deps | `cd backend && uv sync --all-groups` |
 | Run API (mock) | `MOCK_LLM=true uv run uvicorn app.main:app --reload --port 8000` |
-| Run API (Ollama) | `OLLAMA_BASE_URL=http://localhost:11434 OLLAMA_MODEL=mistral uv run uvicorn app.main:app --reload --port 8000` |
+| Run API (Mistral) | `MISTRAL_API_KEY=… uv run uvicorn app.main:app --reload --port 8000` |
 | Tests | `MOCK_LLM=true uv run pytest` |
 | Add dependency | `uv add <package>` (updates `pyproject.toml` + `uv.lock`) |
 | Add dev dependency | `uv add --group dev <package>` |
@@ -129,19 +129,19 @@ All backend work uses **uv** from `backend/`. Do not use bare `python`/`pip` for
 ## Environment
 
 ```
-OLLAMA_BASE_URL=http://ollama:11434
-OLLAMA_MODEL=mistral
+MISTRAL_API_KEY=
+MISTRAL_MODEL=mistral-small-latest
 MATCH_THRESHOLD_GOOD_FIT=70
 CONFIDENCE_THRESHOLD=0.6
 MAX_RESUME_CHARS=8000
-MAX_CONCURRENT_LLM=3
+MAX_CONCURRENT_LLM=4
 MOCK_LLM=false
 ```
 
 ## Backend notes
 
 - Pydantic: `Field(description=...)` on every LLM-facing field; forbid `reasoning` / `ambiguities` on sections.
-- Prompts: **FIELD REFERENCE** + **Prompt constraints** (tech years from projects not outstaff tenure; see project_plan).
+- Prompts: **prompt_constraints** only; LLM uses Mistral **JSON schema** `response_format` (Pydantic → inlined schema) — not tool calling.
 - Retry once on invalid JSON; cap reasoning length if needed.
 - `MOCK_LLM=true` for tests.
 
@@ -165,4 +165,4 @@ Expandable **reasoning** / **ambiguities** per candidate; skill rows show `years
 - [ ] JD + resumes → ranked JSON with reasoning/ambiguities
 - [ ] React shows match explanation per candidate
 - [ ] No auth, no DB
-- [ ] README with model pull
+- [ ] README with Mistral API key setup

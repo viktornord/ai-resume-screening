@@ -20,7 +20,7 @@ class NotMentionedSkill(BaseModel):
 
 class MatchResult(BaseModel):
     candidate_name: str
-    match_score: int = Field(ge=0, le=100, description=fd.MATCH_SCORE)
+    match_score: int = Field(ge=0, le=100, description=fd.MATCH_SCORE_DESC)
     matching_skills: list[MatchingSkill] = Field(default_factory=list)
     not_mentioned_skills: list[NotMentionedSkill] = Field(default_factory=list)
     reasoning: str = Field(description=fd.REASONING)

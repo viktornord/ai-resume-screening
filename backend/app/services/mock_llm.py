@@ -1,14 +1,12 @@
 """Deterministic mock LLM responses for tests and offline dev."""
 
-import json
 import re
 from typing import TypeVar
 
 from pydantic import BaseModel
 
-from app.models.candidate_profile import CandidateProfile
-from app.models.match import MatchResult
 from app.models.requirements import Requirements
+from app.models.resume_screening import ResumeScreeningResult
 
 T = TypeVar("T", bound=BaseModel)
 
@@ -81,18 +79,22 @@ MOCK_MATCH = {
 }
 
 
+def _apply_name_hints(profile: dict, match: dict, prompt: str) -> None:
+    name_match = re.search(r"CANDIDATE NAME HINT:\s*(\S+)", prompt, re.I)
+    if name_match:
+        profile["identity"] = {**profile["identity"], "name": name_match.group(1)}
+        match["candidate_name"] = name_match.group(1)
+
+
 def mock_response(prompt: str, model_class: type[T]) -> T:
     if model_class is Requirements:
         return Requirements.model_validate(MOCK_REQUIREMENTS)
-    if model_class is CandidateProfile:
+    if model_class is ResumeScreeningResult:
         profile = dict(MOCK_PROFILE)
-        name_match = re.search(r"CANDIDATE NAME HINT:\s*(\S+)", prompt, re.I)
-        if name_match:
-            profile["identity"] = {**profile["identity"], "name": name_match.group(1)}
-        return CandidateProfile.model_validate(profile)
-    if model_class is MatchResult:
         match = dict(MOCK_MATCH)
+        _apply_name_hints(profile, match, prompt)
         if "alice" in prompt.lower():
+            profile["identity"] = {**profile["identity"], "name": "Alice Smith"}
             match["candidate_name"] = "Alice Smith"
             match["match_score"] = 62
             match["matching_skills"] = [
@@ -108,5 +110,5 @@ def mock_response(prompt: str, model_class: type[T]) -> T:
             ]
             match["reasoning"] = "Partial Python match; missing FastAPI."
             match["ambiguities"] = []
-        return MatchResult.model_validate(match)
+        return ResumeScreeningResult.model_validate({"profile": profile, "match": match})
     raise ValueError(f"No mock for {model_class}")

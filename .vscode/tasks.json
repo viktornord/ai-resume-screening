@@ -1,0 +1,28 @@
+{
+  "version": "2.0.0",
+  "tasks": [
+    {
+      "label": "frontend: dev server",
+      "type": "npm",
+      "script": "dev",
+      "path": "frontend",
+      "isBackground": true,
+      "problemMatcher": {
+        "owner": "typescript",
+        "pattern": { "regexp": "^$" },
+        "background": {
+          "activeOnStart": true,
+          "beginsPattern": ".",
+          "endsPattern": "(Local:|localhost:5173)"
+        }
+      }
+    },
+    {
+      "label": "backend: uv sync",
+      "type": "shell",
+      "command": "uv sync --all-groups",
+      "options": { "cwd": "${workspaceFolder}/backend" },
+      "problemMatcher": []
+    }
+  ]
+}

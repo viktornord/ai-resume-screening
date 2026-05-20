@@ -14,7 +14,11 @@ class CandidateTechItem(BaseModel):
 
 
 class TechnologiesSection(BaseModel):
-    items: list[CandidateTechItem] = Field(default_factory=list)
+    items: list[CandidateTechItem] = Field(
+        default_factory=list,
+        max_length=30,
+        description=fd.CV_TECH_ITEMS,
+    )
     confidence: float = Field(ge=0, le=1, description=fd.SECTION_CONFIDENCE)
 
 
